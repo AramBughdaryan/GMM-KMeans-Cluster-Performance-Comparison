@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.datasets import make_blobs
 
@@ -29,3 +30,11 @@ plt.title("Scikit-learn K-Means")
 plt.legend()
 
 plt.show()
+
+
+inertia_our = np.sum([np.linalg.norm(X[our_labels == i] - centroid, axis=1).sum() for i, centroid in enumerate(our_centroids)])
+inertia_sklearn = sklearn_kmeans.inertia_
+
+print("Metrics Comparison")
+print("-------------------")
+print(f"Inertia:          Our K-Means = {inertia_our:.2f}, Sklearn = {inertia_sklearn:.2f}")
