@@ -89,7 +89,7 @@ class ClusterComparison:
         plt.show()
 
 if __name__ == "__main__":
-    comparison = ClusterComparison()
+    comparison = ClusterComparison(n_features=2)
     kmeans_centroids, kmeans_labels = comparison.run_kmeans()
     gmm_means, gmm_labels = comparison.run_gmm()
 

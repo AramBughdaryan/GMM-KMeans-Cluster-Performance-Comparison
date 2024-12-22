@@ -22,7 +22,7 @@ def generate_multivariate_data(n_samples=300, dimensions=3, random_state=42):
     
     means = [
         np.array([-5] * dimensions),
-        np.array([5] * dimensions),
+        np.array([2] * dimensions),
         np.zeros(dimensions)
     ]
     print('Original means.', means)
@@ -50,7 +50,7 @@ def custom_random_init(X, n_components):
     
     means = X[np.random.choice(X.shape[0], n_components, replace=False)]
     
-    covariances = [np.eye(dimensions) * np.var(X[:, i]) for i in range(dimensions)]
+    covariances = [np.eye(dimensions) for i in range(n_components)]
     
     pi = np.ones(n_components) / n_components
     
@@ -58,7 +58,6 @@ def custom_random_init(X, n_components):
 
 def custom_step_expectation(X, n_components, means, covariances):
     weights = np.zeros((n_components, X.shape[0]))
-    
     for j in range(n_components):
         weights[j, :] = multivariate_normal.pdf(X, mean=means[j], cov=covariances[j])
     
@@ -66,7 +65,7 @@ def custom_step_expectation(X, n_components, means, covariances):
 
 def custom_step_maximization(X, weights, means, covariances, n_components, pi):
     dimensions = X.shape[1]
-    
+
     r = []
     for j in range(n_components):
         r_j = (weights[j] * pi[j]) / (np.sum([weights[i] * pi[i] for i in range(n_components)], axis=0))
