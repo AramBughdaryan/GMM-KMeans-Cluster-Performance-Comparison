@@ -1,9 +1,8 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import silhouette_score
 from scipy.stats import mode
-
 
 from kmeans.kmeans import k_means
 from gmm.gmm import custom_train_gmm, generate_multivariate_data, custom_step_expectation
@@ -15,36 +14,27 @@ class ClusterComparison:
         self.n_clusters = n_clusters
         self.random_state = random_state
         self.X = generate_multivariate_data(n_samples, n_features, random_state)
-        self.true_labels = np.repeat(np.arange(n_clusters), n_samples)
         self.results = {}
 
-    def evaluate_clustering(self, labels_true, labels_pred):
-        labels_pred_matched = np.zeros_like(labels_pred)
-        unique_pred_labels = np.unique(labels_pred)
-        
-        assert labels_true.shape[0] == labels_pred.shape[0], \
-        "Mismatch between true labels and predicted labels sizes."
-
-        for pred_label in unique_pred_labels:
-            mask = labels_pred == pred_label
-            true_labels_for_cluster = labels_true[mask]
-
-            if true_labels_for_cluster.size > 0:
-                most_common = mode(true_labels_for_cluster, keepdims=True).mode[0]
-                labels_pred_matched[mask] = most_common
-
-        return accuracy_score(labels_true, labels_pred_matched)
+    def calculate_inertia(self, X, centroids, labels):
+        inertia = 0.0
+        for i, centroid in enumerate(centroids):
+            cluster_points = X[labels == i]
+            inertia += np.sum((cluster_points - centroid) ** 2)
+        return inertia
 
     def run_kmeans(self):
         start_time = time.time()
         kmeans_centroids, kmeans_labels = k_means(self.X, self.n_clusters)
         kmeans_time = time.time() - start_time
-        
-        kmeans_accuracy = self.evaluate_clustering(self.true_labels, kmeans_labels)
+
+        kmeans_inertia = self.calculate_inertia(self.X, kmeans_centroids, kmeans_labels)
+        kmeans_silhouette = silhouette_score(self.X, kmeans_labels)
 
         self.results['K-Means'] = {
             'Execution Time (s)': kmeans_time,
-            'Clustering Accuracy': kmeans_accuracy
+            'Inertia': kmeans_inertia,
+            'Silhouette Score': kmeans_silhouette
         }
 
         return kmeans_centroids, kmeans_labels
@@ -54,11 +44,12 @@ class ClusterComparison:
         gmm_means, gmm_covariances, gmm_pi = custom_train_gmm(self.X, self.n_clusters)
         gmm_labels = np.argmax(custom_step_expectation(self.X, self.n_clusters, gmm_means, gmm_covariances), axis=0)
         gmm_time = time.time() - start_time
-        gmm_accuracy = self.evaluate_clustering(self.true_labels, gmm_labels)
+
+        gmm_silhouette = silhouette_score(self.X, gmm_labels)
 
         self.results['GMM'] = {
             'Execution Time (s)': gmm_time,
-            'Clustering Accuracy': gmm_accuracy
+            'Silhouette Score': gmm_silhouette
         }
 
         return gmm_means, gmm_labels
@@ -72,14 +63,12 @@ class ClusterComparison:
             plt.scatter(centroids[:, 0], centroids[:, 1], color='black', marker='x', s=100, label="Centroids")
         plt.title(title)
         plt.legend()
-        plt.xlabel("Feature 1")
-        plt.ylabel("Feature 2")
         plt.show()
 
     def plot_comparison(self):
         algorithms = list(self.results.keys())
         execution_times = [self.results[alg]['Execution Time (s)'] for alg in algorithms]
-        accuracies = [self.results[alg]['Clustering Accuracy'] for alg in algorithms]
+        silhouette_scores = [self.results[alg]['Silhouette Score'] for alg in algorithms]
 
         plt.figure(figsize=(12, 5))
 
@@ -90,16 +79,14 @@ class ClusterComparison:
         plt.ylabel("Time (seconds)")
         plt.xlabel("Algorithm")
 
-        # Accuracy
         plt.subplot(1, 2, 2)
-        plt.bar(algorithms, accuracies, color=['blue', 'green'])
-        plt.title("Clustering Accuracy Comparison")
-        plt.ylabel("Accuracy")
+        plt.bar(algorithms, silhouette_scores, color=['blue', 'green'])
+        plt.title("Silhouette Score Comparison")
+        plt.ylabel("Score")
         plt.xlabel("Algorithm")
 
         plt.tight_layout()
         plt.show()
-
 
 if __name__ == "__main__":
     comparison = ClusterComparison()
